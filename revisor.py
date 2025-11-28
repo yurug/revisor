@@ -119,7 +119,7 @@ def ask_llm(system_prompt, user_text):
     try:
         json_body = json.dumps(body)
         curl_cmd = f'curl -sS -X POST "{API_BASE}/responses" -H "{headers[0]}" -H "{headers[1]}" -d @-'
-        out = run(["bash", "-lc", curl_cmd], timeout=60.0, stdin=json_body)
+        out = run(["bash", "-lc", curl_cmd], timeout=120.0, stdin=json_body)
         data = json.loads(out.stdout)
         log(f"LLM response keys={list(data.keys())}")
 
