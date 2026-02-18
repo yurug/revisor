@@ -149,22 +149,17 @@ def ask_llm(system_prompt, user_text):
     return ""
 
 
-def play_notification_sound():
-    """Plays a notification sound using paplay or aplay."""
-    player = "paplay" if whereis("paplay") else "aplay" if whereis("aplay") else None
-    if not player:
-        return
-    sound_files = [
-        "/usr/share/sounds/freedesktop/stereo/message.oga",
-        "/usr/share/sounds/freedesktop/stereo/complete.oga",
-    ]
-    for sound_file in sound_files:
-        if Path(sound_file).exists():
-            try:
-                subprocess.Popen([player, sound_file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                return
-            except Exception:
-                pass
+def notify_i3bar():
+    """Shows a brief notification in the i3bar via i3blocks, auto-clears after 5s."""
+    state_file = Path("/tmp/revisor-notify")
+    state_file.write_text("✓ revised")
+    # Signal i3blocks to refresh (signal=3 → SIGRTMIN+3)
+    subprocess.run(["pkill", "-RTMIN+3", "i3blocks"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Schedule cleanup in background: sleep 5s, remove file, signal again
+    subprocess.Popen(
+        ["bash", "-c", "sleep 5; rm -f /tmp/revisor-notify; pkill -RTMIN+3 i3blocks"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def paste_x11(text):
@@ -214,7 +209,7 @@ def main():
         log("No source text captured; abort."); sys.exit(0)
 
     revised = ask_llm(sys_prompt, src)
-    play_notification_sound()
+    notify_i3bar()
 
     if not revised.strip():
         log("LLM returned empty; fallback to source.")
