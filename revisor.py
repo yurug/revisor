@@ -9,8 +9,20 @@ from subprocess import CalledProcessError, TimeoutExpired
 PROMPT_FILE = Path.home() / ".revisor"
 LOG_FILE    = Path.home() / ".revisor.log"
 
+def _keyring(service, key):
+    """Fetch a secret from GNOME Keyring via secret-tool (None if absent)."""
+    try:
+        r = subprocess.run(["secret-tool", "lookup", "service", service, "key", key],
+                           capture_output=True, text=True, timeout=5)
+        return r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else None
+    except Exception:
+        return None
+
 MODEL   = os.getenv("REVISOR_MODEL", "gpt-5")
-API_KEY = os.getenv("OPENAI_API_KEY")
+# Secrets migrated from ~/.secrets to GNOME Keyring (2026-06): use the env var
+# if set, else fetch from the keyring (service=revisor key=api-key). The keyring
+# path works regardless of launch context (i3, shell, systemd).
+API_KEY = os.getenv("OPENAI_API_KEY") or _keyring("revisor", "api-key")
 API_BASE= os.getenv("OPENAI_BASE", "https://api.openai.com/v1")
 ECHO    = os.getenv("REVISOR_ECHO", "0") == "1"  # also print revised text to stdout
 
